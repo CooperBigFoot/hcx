@@ -1,6 +1,6 @@
 [project]
 name = "hcx"
-version = "0.1.4"
+version = "0.1.5"
 description = "hcx"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -66,7 +66,7 @@ addopts = ["--strict-markers", "--strict-config", "-ra"]
 # Bump My Version
 # -----------------------
 [tool.bumpversion]
-current_version = "0.1.4"
+current_version = "0.1.5"
 commit = false
 tag = false
 allow_dirty = true
