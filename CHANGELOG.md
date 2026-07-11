@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Added a human-gated GitHub Actions release workflow and static release-policy coverage.
+
+### Changed
+
+- Documented release governance for versioning, tagging, and trusted publishing.
+
 ## [0.1.7] - 2026-07-11
 
 ### Added
@@ -39,7 +47,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Established the typed batch, forecast, output-specification, model, and model-factory contracts.
 - Added the normative hcx specification, `py.typed` marker, Python 3.11 support, and multi-version CI.
 
-[Unreleased]: https://github.com/CooperBigFoot/hcx/compare/v0.1.7...HEAD
+[Unreleased]: https://github.com/CooperBigFoot/hcx/compare/v0.1.8...HEAD
+[0.1.8]: https://github.com/CooperBigFoot/hcx/compare/v0.1.7...v0.1.8
 [0.1.7]: https://github.com/CooperBigFoot/hcx/compare/v0.1.6...v0.1.7
 [0.1.6]: https://github.com/CooperBigFoot/hcx/compare/v0.1.5...v0.1.6
 [0.1.5]: https://github.com/CooperBigFoot/hcx/compare/v0.1.4...v0.1.5
