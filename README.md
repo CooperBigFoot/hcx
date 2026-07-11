@@ -67,3 +67,12 @@ unique within an environment.
 
 See the normative [factory and entry-point clauses](docs/spec.md#6-model-factory-and-hcxmodels-entry-points)
 and the [changelog](CHANGELOG.md) for version history.
+
+## Releases
+
+Maintainers bump the version with bump-my-version and update the changelog in
+the same commit. A human then creates and publishes the GitHub Release, which
+creates the `vX.Y.Z` tag. The GitHub Actions workflow builds distributions with
+`uv build` and publishes them through OIDC trusted publishing. Prereleases and
+manual workflow dispatches target TestPyPI; published non-prereleases target
+PyPI. Local publishing and hand-made tags are forbidden.

@@ -39,7 +39,7 @@ Use modern Python typing syntax:
 - Avoid importing legacy aliases from `typing` such as `List`, `Dict`, `Tuple`, or `Optional`.
 - Import from `typing` only when needed for features with no built-in equivalent, such as `Protocol`, `Literal`, or `NewType`.
 
-## 3. Versioning and Tags
+## 3. Versioning and Releases
 
 Every commit must include a patch version bump.
 
@@ -49,13 +49,19 @@ Before committing:
 uv run bump-my-version bump patch
 ```
 
-Stage the version files with the code changes, commit normally, then tag:
-
-```bash
-git tag v$(uv run bump-my-version show current_version)
-```
-
 Only bump minor or major versions when explicitly requested.
+
+`pyproject.toml` and `src/hcx/__init__.py` must remain synchronized by the
+configured bump-my-version tool and must never be edited independently.
+
+Packages are built and published only by `.github/workflows/release.yml` in
+GitHub Actions. Never run `uv publish` or `twine` locally. Never create a
+release tag by hand; publishing the GitHub Release creates its `vX.Y.Z` tag.
+
+Creating or publishing any GitHub Release, including prereleases and
+TestPyPI/name-claiming releases, is an explicit human action and must not be
+performed autonomously. A published prerelease and a manual workflow dispatch
+publish to TestPyPI. A published non-prerelease publishes to PyPI.
 
 ## 4. Testing Complex Data Objects
 
