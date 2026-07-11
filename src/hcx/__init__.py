@@ -1,4 +1,4 @@
-__version__ = "0.1.6"
+__version__ = "0.1.7"
 
 from hcx.batch import Batch, BatchMetadata, GriddedDynamic, GriddedStatic
 from hcx.conformance import ConformanceCheck, ConformanceError, assert_conforms, check_conformance

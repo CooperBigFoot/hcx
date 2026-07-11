@@ -79,6 +79,67 @@ methods. `ModelFactory` expresses this exact boundary without fallback
 parameters, extra keyword arguments, config classes, batches, devices, or
 transformation objects.
 
+### Third-party implementations
+
+A third-party model package must depend on `hcx` at runtime and implement a
+`torch.nn.Module` whose `forward(batch: Batch) -> Forecast` behavior satisfies
+`ForecastModel`. The returned forecast must obey the normative shape,
+dtype/device, and metadata identity requirements in this specification.
+
+Its factory must satisfy `ModelFactory`: it accepts model-specific
+`dict[str, object]` configuration plus keyword-only ordered `dynamic_inputs` and
+`static_inputs`, resolved `input_size`, `static_size`, and `output_size`, and a
+resolved `OutputSpecification[object]`, and returns the module. Configuration
+is model-specific only. Names must not be reordered, and neither names nor
+first-batch-resolved sizes may be recomputed by the factory.
+
+Discovery uses the constant value `hcx.models`. The loaded entry-point object
+must satisfy the frozen factory signature above, and the returned module must
+meet the model and forecast contract. A model package declares its factory as:
+
+```toml
+[project.entry-points.'hcx.models']
+my_model = "my_model_package.factory:create_model"
+```
+
+Entry-point names are consumer-facing identifiers and should remain stable and
+unique within an environment. `scalar_lstm` is hcx's packaged reference entry
+point, not a required base class.
+
+`make_synthetic_batch` and `assert_conforms` provide the package-independent
+proof workflow. A complete smoke test may load the entry point, or import the
+factory directly, then pass ordered names and first-batch-resolved sizes:
+
+```python
+from importlib.metadata import entry_points
+
+from hcx import Point, assert_conforms, make_synthetic_batch
+
+batch = make_synthetic_batch()
+assert batch.scalar_dynamic is not None
+assert batch.scalar_static is not None
+
+factory = entry_points(group="hcx.models", name="my_model")[0].load()
+dynamic_inputs = [
+    f"dynamic_{index}" for index in range(batch.scalar_dynamic.shape[-1])
+]
+static_inputs = [
+    f"static_{index}" for index in range(batch.scalar_static.shape[-1])
+]
+model = factory(
+    {},
+    dynamic_inputs=dynamic_inputs,
+    static_inputs=static_inputs,
+    input_size=batch.scalar_dynamic.shape[-1],
+    static_size=batch.scalar_static.shape[-1],
+    output_size=batch.target.shape[-1],
+    output_specification=Point(),
+)
+assert_conforms(model, batch)
+```
+
+This workflow requires no external dataset or training package.
+
 ## 7. Shapes, dtype, and device
 
 All shapes are specified in sections 2 through 4. Floating tensor dtype is
