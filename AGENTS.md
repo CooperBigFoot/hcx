@@ -49,6 +49,10 @@ Before committing:
 uv run bump-my-version bump patch
 ```
 
+After the patch bump, regenerate the lockfile with `uv lock` and commit the
+updated `uv.lock` together with `pyproject.toml` and `src/hcx/__init__.py`.
+CI runs `uv sync --locked`, so a stale lockfile fails the build.
+
 Only bump minor or major versions when explicitly requested.
 
 `pyproject.toml` and `src/hcx/__init__.py` must remain synchronized by the
