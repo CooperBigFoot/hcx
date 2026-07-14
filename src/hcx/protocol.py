@@ -15,6 +15,11 @@ class ForecastModel(Protocol):
 
 
 @runtime_checkable
+class FeatureExtractor(Protocol):
+    def forward(self, batch: Batch) -> Batch: ...
+
+
+@runtime_checkable
 class ModelFactory(Protocol):
     def __call__(
         self,
