@@ -164,3 +164,56 @@ existing protocols may be compatible. Removing or renaming fields; changing
 field order, types, or meaning; changing the model-factory signature or
 entry-point group; or changing shape, identity, or target-space semantics is a
 breaking change.
+
+## 10. Native model stacking
+
+The runtime-checkable `FeatureExtractor` structural protocol consists solely of
+`forward(batch: Batch) -> Batch`. As with `ForecastModel`, runtime checks
+establish attribute structure by name, not annotations, return types, identity,
+or behavior. Its behavioral contract is separate: the returned value must be a
+valid `Batch`, must carry the input `target` object and `metadata` object by
+identity, and must place the intermediate latent in `scalar_dynamic` with shape
+`[B, T, D]`.
+
+The load-bearing design choice: the intermediate representation is **a
+`Batch`**. The extractor is `Batch → Batch` — it emits its latent `[B, T, D]`
+in the `scalar_dynamic` leg — so every existing `ForecastModel` (including the
+reference `ScalarLSTM`) is a legal forecaster with no modification, and no new
+latent or forecaster type is introduced. `D` is the latent width occupying the
+same scalar-dynamic feature axis that §2 names `F`; the different name denotes
+the axis's latent role, not a different shape. The latent rides in
+`scalar_dynamic` (shape `[B, T, F]`); no new `Batch` field.
+
+The extractor must honor §8 by preserving `target` and `metadata` by object
+identity. The forecaster and its output-specification path must continue §8's
+rule: the metadata objects contained in that same metadata carrier must
+propagate verbatim by identity into the final `Forecast`, and no stage may
+rebuild or mutate them. In this sense, `target`/`metadata` propagate **verbatim
+by identity** through extractor → forecaster → `Forecast`. The target travels
+through the intermediate `Batch` for use at the forecaster and conformance
+boundary; `Forecast` carries the metadata components specified in §§3 and 8,
+not a target field.
+
+`ComposedModel` holds one `FeatureExtractor` and one `ForecastModel`. It is an
+`nn.Module` that itself satisfies `ForecastModel`, and is the dumb pipe
+represented by `forecaster(extractor(batch))`: its implementation explicitly
+calls `extractor.forward(batch)` and passes that returned `Batch` directly to
+`forecaster.forward(...)`, then returns the resulting `Forecast` unchanged. Its
+`consumed_quadrants` property delegates to the extractor and exposes `None`
+when the extractor has no such declaration.
+
+Minimal behavioral contract — return a valid `Batch` that carries `target` and
+`metadata` **by identity** from the input and populates `scalar_dynamic` with the
+latent `[B, T, D]`; all other leg cleanup (clearing gridded, passing vs. clearing
+`scalar_static`) is left to the implementation, not mandated. The protocol and
+`ComposedModel` do not normalize other legs. Clearing or preserving gridded
+mappings and passing or clearing `scalar_static` are extractor implementation
+choices, so this contract does not settle scalar-static fusion. The extractor
+must return a valid, forecaster-compatible `Batch`; the composition wrapper
+does not clean legs or validate the intermediate batch.
+
+Native stacking is additive and non-breaking under §9. It does not change
+`Batch`'s fields or four quadrants, `Forecast`, `OutputSpecification`, the
+`ModelFactory` callable signature in §6, or the frozen `hcx.models` entry-point
+group. It registers no composed model through entry points, adds no second
+forecaster role, and mandates no particular extractor implementation.
