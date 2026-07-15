@@ -11,7 +11,19 @@ def _floating_tensors(batch):
     for grid in (*batch.gridded_dynamic.values(), *batch.gridded_static.values()):
         yield grid.values
         yield grid.coordinates
+        yield grid.resolution
     yield batch.target
+
+
+def _assert_resolution_contract(batch) -> None:
+    for grid in (*batch.gridded_dynamic.values(), *batch.gridded_static.values()):
+        expected = torch.tensor([0.25, -0.25], dtype=grid.coordinates.dtype, device=grid.coordinates.device)
+        assert grid.resolution.shape == (2,)
+        assert grid.resolution[0] > 0
+        assert grid.resolution[1] < 0
+        assert grid.resolution.dtype == grid.coordinates.dtype
+        assert grid.resolution.device == grid.coordinates.device
+        torch.testing.assert_close(grid.resolution, expected, rtol=0, atol=0)
 
 
 def test_default_batch_is_exact_and_reproducible() -> None:
@@ -36,6 +48,7 @@ def test_default_batch_is_exact_and_reproducible() -> None:
     assert dynamic.padding_mask.shape == (4, 5)
     assert static.values.shape == (4, 5, 3)
     assert first.target.shape == (4, 2)
+    _assert_resolution_contract(first)
     assert all(t.dtype == torch.float32 and t.device.type == "cpu" for t in _floating_tensors(first))
     assert dynamic.padding_mask.dtype == torch.bool
     assert first.metadata.input_end_indices.dtype == np.int64
@@ -51,6 +64,7 @@ def test_seed_and_float64_propagation() -> None:
     assert not torch.equal(first.scalar_dynamic, second.scalar_dynamic)
     assert not torch.equal(first.target, second.target)
     double = make_synthetic_batch(dtype=torch.float64, device="cpu")
+    _assert_resolution_contract(double)
     assert all(t.dtype == torch.float64 and t.device.type == "cpu" for t in _floating_tensors(double))
 
 
@@ -62,6 +76,14 @@ def test_quadrant_absence_options() -> None:
     assert gridded.scalar_dynamic is None and gridded.scalar_static is None
     assert list(gridded.gridded_dynamic) == ["meteorology"]
     assert list(gridded.gridded_static) == ["physiography"]
+    dynamic_only = make_synthetic_batch(include_gridded_static=False)
+    assert list(dynamic_only.gridded_dynamic) == ["meteorology"]
+    assert dynamic_only.gridded_static == {}
+    _assert_resolution_contract(dynamic_only)
+    static_only = make_synthetic_batch(include_gridded_dynamic=False)
+    assert static_only.gridded_dynamic == {}
+    assert list(static_only.gridded_static) == ["physiography"]
+    _assert_resolution_contract(static_only)
 
 
 @pytest.mark.parametrize("name", ["batch_size", "input_length", "output_length", "grid_cells"])

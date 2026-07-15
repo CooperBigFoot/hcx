@@ -1,4 +1,4 @@
-__version__ = "0.1.3"
+__version__ = "0.1.4"
 
 from hcx.batch import Batch, BatchMetadata, GriddedDynamic, GriddedStatic
 from hcx.composition import ComposedModel

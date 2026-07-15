@@ -67,7 +67,8 @@ def make_synthetic_batch(
         values = randn((batch_size, input_length, grid_cells, gridded_dynamic_features))
         coordinates = rand((batch_size, grid_cells, 2))
         padding_mask = torch.zeros((batch_size, grid_cells), dtype=torch.bool, device=device)
-        gridded_dynamic["meteorology"] = GriddedDynamic(values, coordinates, padding_mask)
+        resolution = torch.tensor([0.25, -0.25], dtype=coordinates.dtype, device=coordinates.device)
+        gridded_dynamic["meteorology"] = GriddedDynamic(values, coordinates, padding_mask, resolution)
 
     gridded_static: dict[str, GriddedStatic] = {}
     if include_gridded_static:
@@ -76,7 +77,8 @@ def make_synthetic_batch(
             coordinates = rand((batch_size, grid_cells, 2))
             padding_mask = torch.zeros((batch_size, grid_cells), dtype=torch.bool, device=device)
         assert padding_mask is not None
-        gridded_static["physiography"] = GriddedStatic(values, coordinates, padding_mask)
+        resolution = torch.tensor([0.25, -0.25], dtype=coordinates.dtype, device=coordinates.device)
+        gridded_static["physiography"] = GriddedStatic(values, coordinates, padding_mask, resolution)
 
     target = randn((batch_size, output_length))
     metadata = BatchMetadata(
