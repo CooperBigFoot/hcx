@@ -9,6 +9,7 @@ class GriddedDynamic:
     values: torch.Tensor
     coordinates: torch.Tensor
     padding_mask: torch.Tensor
+    resolution: torch.Tensor
 
 
 @dataclass(frozen=True)
@@ -16,6 +17,7 @@ class GriddedStatic:
     values: torch.Tensor
     coordinates: torch.Tensor
     padding_mask: torch.Tensor
+    resolution: torch.Tensor
 
 
 @dataclass(frozen=True)
