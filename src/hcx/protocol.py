@@ -7,6 +7,7 @@ from hcx.output import Forecast
 from hcx.specifications import OutputSpecification
 
 MODEL_ENTRY_POINT_GROUP = "hcx.models"
+_EMPTY_GRIDDED_SIZES: dict[str, int] = {}
 
 
 @runtime_checkable
@@ -27,6 +28,8 @@ class ModelFactory(Protocol):
         *,
         dynamic_inputs: list[str],
         static_inputs: list[str],
+        gridded_dynamic_sizes: dict[str, int] = _EMPTY_GRIDDED_SIZES,
+        gridded_static_sizes: dict[str, int] = _EMPTY_GRIDDED_SIZES,
         input_size: int,
         static_size: int,
         output_size: int,
