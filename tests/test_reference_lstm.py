@@ -29,6 +29,8 @@ def _model(batch, specification, config=None, **overrides):
     arguments = {
         "dynamic_inputs": ["precipitation", "temperature", "pet"],
         "static_inputs": ["elevation", "area"],
+        "gridded_dynamic_sizes": {},
+        "gridded_static_sizes": {},
         "input_size": batch.scalar_dynamic.shape[-1],
         "static_size": batch.scalar_static.shape[-1],
         "output_size": batch.target.shape[-1],

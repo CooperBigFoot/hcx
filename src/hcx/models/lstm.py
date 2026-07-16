@@ -11,6 +11,8 @@ from hcx.batch import Batch
 from hcx.output import Forecast
 from hcx.specifications import OutputSpecification
 
+_EMPTY_GRIDDED_SIZES: dict[str, int] = {}
+
 
 @dataclass(frozen=True)
 class LSTMConfig:
@@ -141,11 +143,14 @@ def factory(
     *,
     dynamic_inputs: list[str],
     static_inputs: list[str],
+    gridded_dynamic_sizes: dict[str, int] = _EMPTY_GRIDDED_SIZES,
+    gridded_static_sizes: dict[str, int] = _EMPTY_GRIDDED_SIZES,
     input_size: int,
     static_size: int,
     output_size: int,
     output_specification: OutputSpecification[object],
 ) -> torch.nn.Module:
+    del gridded_dynamic_sizes, gridded_static_sizes
     _validate_size("input_size", input_size)
     _validate_size("static_size", static_size, allow_zero=True)
     _validate_size("output_size", output_size)
