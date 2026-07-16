@@ -27,7 +27,7 @@ def test_installed_scalar_lstm_entry_point():
     for seed, specification in [(11, Point()), (12, Gaussian())]:
         with torch.random.fork_rng():
             torch.manual_seed(seed)
-            model = loaded_factory(
+            legacy_model = loaded_factory(
                 {},
                 dynamic_inputs=["precipitation", "temperature", "pet"],
                 static_inputs=["elevation", "area"],
@@ -36,4 +36,47 @@ def test_installed_scalar_lstm_entry_point():
                 output_size=batch.target.shape[-1],
                 output_specification=specification,
             )
-        assert_conforms(model, batch)
+        with torch.random.fork_rng():
+            torch.manual_seed(seed)
+            explicit_empty_model = loaded_factory(
+                {},
+                dynamic_inputs=["precipitation", "temperature", "pet"],
+                static_inputs=["elevation", "area"],
+                gridded_dynamic_sizes={},
+                gridded_static_sizes={},
+                input_size=batch.scalar_dynamic.shape[-1],
+                static_size=batch.scalar_static.shape[-1],
+                output_size=batch.target.shape[-1],
+                output_specification=specification,
+            )
+        with torch.random.fork_rng():
+            torch.manual_seed(seed)
+            populated_model = loaded_factory(
+                {},
+                dynamic_inputs=["precipitation", "temperature", "pet"],
+                static_inputs=["elevation", "area"],
+                gridded_dynamic_sizes={"atmosphere": 2},
+                gridded_static_sizes={"terrain": 3},
+                input_size=batch.scalar_dynamic.shape[-1],
+                static_size=batch.scalar_static.shape[-1],
+                output_size=batch.target.shape[-1],
+                output_specification=specification,
+            )
+
+        legacy_forecast = assert_conforms(legacy_model, batch)
+        explicit_empty_forecast = assert_conforms(explicit_empty_model, batch)
+        populated_forecast = assert_conforms(populated_model, batch)
+
+        torch.testing.assert_close(explicit_empty_forecast.prediction, legacy_forecast.prediction)
+        if legacy_forecast.variance is None:
+            assert explicit_empty_forecast.variance is None
+        else:
+            assert explicit_empty_forecast.variance is not None
+            torch.testing.assert_close(explicit_empty_forecast.variance, legacy_forecast.variance)
+
+        torch.testing.assert_close(populated_forecast.prediction, legacy_forecast.prediction)
+        if legacy_forecast.variance is None:
+            assert populated_forecast.variance is None
+        else:
+            assert populated_forecast.variance is not None
+            torch.testing.assert_close(populated_forecast.variance, legacy_forecast.variance)

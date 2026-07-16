@@ -6,6 +6,8 @@ import torch
 import hcx
 from hcx import Batch, BatchMetadata, Forecast, ForecastModel, ModelFactory, OutputSpecification
 
+_EMPTY_GRIDDED_SIZES: dict[str, int] = {}
+
 
 class MinimalModel(torch.nn.Module):
     def forward(self, batch: Batch) -> Forecast:
@@ -22,12 +24,24 @@ def factory(
     *,
     dynamic_inputs: list[str],
     static_inputs: list[str],
+    gridded_dynamic_sizes: dict[str, int] = _EMPTY_GRIDDED_SIZES,
+    gridded_static_sizes: dict[str, int] = _EMPTY_GRIDDED_SIZES,
     input_size: int,
     static_size: int,
     output_size: int,
     output_specification: OutputSpecification[object],
 ) -> torch.nn.Module:
-    del model_config, dynamic_inputs, static_inputs, input_size, static_size, output_size, output_specification
+    del (
+        model_config,
+        dynamic_inputs,
+        static_inputs,
+        gridded_dynamic_sizes,
+        gridded_static_sizes,
+        input_size,
+        static_size,
+        output_size,
+        output_specification,
+    )
     return MinimalModel()
 
 
@@ -44,6 +58,23 @@ def test_public_surface_and_factory_signature_are_frozen() -> None:
     assert hcx.MODEL_ENTRY_POINT_GROUP == "hcx.models"
     expected = inspect.signature(factory)
     actual_parameters = list(inspect.signature(ModelFactory.__call__).parameters.values())[1:]
+    assert [parameter.name for parameter in expected.parameters.values()] == [
+        "model_config",
+        "dynamic_inputs",
+        "static_inputs",
+        "gridded_dynamic_sizes",
+        "gridded_static_sizes",
+        "input_size",
+        "static_size",
+        "output_size",
+        "output_specification",
+    ]
+    assert expected.parameters["gridded_dynamic_sizes"].kind is inspect.Parameter.KEYWORD_ONLY
+    assert expected.parameters["gridded_static_sizes"].kind is inspect.Parameter.KEYWORD_ONLY
+    assert expected.parameters["gridded_dynamic_sizes"].annotation == dict[str, int]
+    assert expected.parameters["gridded_static_sizes"].annotation == dict[str, int]
+    assert expected.parameters["gridded_dynamic_sizes"].default == {}
+    assert expected.parameters["gridded_static_sizes"].default == {}
     assert tuple(actual_parameters) == tuple(expected.parameters.values())
     assert inspect.signature(ModelFactory.__call__).return_annotation == expected.return_annotation
     for name in hcx.__all__:
