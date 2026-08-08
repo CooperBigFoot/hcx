@@ -41,20 +41,6 @@ Use modern Python typing syntax:
 
 ## 3. Versioning and Releases
 
-Every commit must include a patch version bump.
-
-Before committing:
-
-```bash
-uv run bump-my-version bump patch
-```
-
-After the patch bump, regenerate the lockfile with `uv lock` and commit the
-updated `uv.lock` together with `pyproject.toml` and `src/hcx/__init__.py`.
-CI runs `uv sync --locked`, so a stale lockfile fails the build.
-
-Only bump minor or major versions when explicitly requested.
-
 `pyproject.toml` and `src/hcx/__init__.py` must remain synchronized by the
 configured bump-my-version tool and must never be edited independently.
 
@@ -106,3 +92,12 @@ import polars.testing as pl_testing
 pl_testing.assert_frame_equal(result_df, expected_df)
 pl_testing.assert_series_equal(result_series, expected_series)
 ```
+
+<!-- BEGIN SYNCED DOCTRINE; source-sha256=59e37fd6b3dbab27530822e6956da51bb7ae76b637e3638530f99a8b4db9038d -->
+Four rules. They are one design stance seen four ways: a module means one thing, receives exactly what it needs, in types that cannot lie, and dies rather than guess.
+
+1. **A module means one thing.**
+2. **It receives exactly what it needs.**
+3. **Its types cannot lie.**
+4. **It dies rather than guess.**
+<!-- END SYNCED DOCTRINE -->
