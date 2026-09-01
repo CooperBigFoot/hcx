@@ -1,7 +1,16 @@
+import math
+
 import numpy as np
 import pytest
 import torch
 
+from hcx import (
+    CellReferenceConvention,
+    CoordinateOrder,
+    CoordinateReferenceSystem,
+    CoordinateUnit,
+    SignedResolutionConvention,
+)
 from hcx.synthetic import make_synthetic_batch
 
 
@@ -24,6 +33,14 @@ def _assert_resolution_contract(batch) -> None:
         assert grid.resolution.dtype == grid.coordinates.dtype
         assert grid.resolution.device == grid.coordinates.device
         torch.testing.assert_close(grid.resolution, expected, rtol=0, atol=0)
+        assert grid.geography.coordinate_order is CoordinateOrder.LONGITUDE_LATITUDE
+        assert grid.geography.crs is CoordinateReferenceSystem.EPSG_4326
+        assert grid.geography.coordinate_unit is CoordinateUnit.DEGREE
+        assert grid.geography.cell_reference is CellReferenceConvention.CENTER
+        assert (
+            grid.geography.resolution_convention
+            is SignedResolutionConvention.AXIS_ALIGNED_CELL_EXTENT_WITH_AXIS_DIRECTION
+        )
 
 
 def test_default_batch_is_exact_and_reproducible() -> None:
@@ -33,6 +50,7 @@ def test_default_batch_is_exact_and_reproducible() -> None:
     assert list(first.gridded_static) == ["physiography"]
     assert first.gridded_dynamic["meteorology"].coordinates is first.gridded_static["physiography"].coordinates
     assert first.gridded_dynamic["meteorology"].padding_mask is first.gridded_static["physiography"].padding_mask
+    assert first.gridded_dynamic["meteorology"].geography is first.gridded_static["physiography"].geography
     for left, right in zip(_floating_tensors(first), _floating_tensors(second), strict=True):
         torch.testing.assert_close(left, right, rtol=0, atol=0)
     np.testing.assert_array_equal(first.metadata.input_end_indices, second.metadata.input_end_indices)
@@ -55,6 +73,28 @@ def test_default_batch_is_exact_and_reproducible() -> None:
     assert first.metadata.target_fill_mask.dtype == np.int8
     np.testing.assert_array_equal(first.metadata.input_end_indices, np.full(4, 5, dtype=np.int64))
     np.testing.assert_array_equal(first.metadata.target_fill_mask, np.zeros((4, 2), dtype=np.int8))
+
+
+@pytest.mark.parametrize("grid_cells", [1, 2, 5, 7])
+def test_synthetic_centers_agree_with_signed_native_resolution(grid_cells: int) -> None:
+    batch = make_synthetic_batch(batch_size=2, grid_cells=grid_cells)
+    dynamic = batch.gridded_dynamic["meteorology"]
+    static = batch.gridded_static["physiography"]
+    column_count = math.ceil(math.sqrt(grid_cells))
+    cell_indices = torch.arange(grid_cells, device=dynamic.coordinates.device)
+    columns = torch.remainder(cell_indices, column_count)
+    rows = torch.div(cell_indices, column_count, rounding_mode="floor")
+    expected_single = torch.stack(
+        (
+            -120.0 + columns * dynamic.resolution[0],
+            45.0 + rows * dynamic.resolution[1],
+        ),
+        dim=-1,
+    ).to(dtype=dynamic.coordinates.dtype)
+    expected = expected_single.unsqueeze(0).expand(2, -1, -1)
+
+    torch.testing.assert_close(dynamic.coordinates, expected, rtol=0, atol=0)
+    torch.testing.assert_close(static.coordinates, expected, rtol=0, atol=0)
 
 
 def test_seed_and_float64_propagation() -> None:

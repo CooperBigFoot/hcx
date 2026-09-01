@@ -4,7 +4,18 @@ import numpy as np
 import pytest
 import torch
 
-from hcx import Batch, BatchMetadata, GriddedDynamic, GriddedStatic
+from hcx import (
+    Batch,
+    BatchMetadata,
+    CellReferenceConvention,
+    CoordinateOrder,
+    CoordinateReferenceSystem,
+    CoordinateUnit,
+    GeographicGridGeometry,
+    GriddedDynamic,
+    GriddedStatic,
+    SignedResolutionConvention,
+)
 
 
 def test_native_batch_carriers_preserve_supplied_objects_and_are_frozen() -> None:
@@ -13,8 +24,15 @@ def test_native_batch_carriers_preserve_supplied_objects_and_are_frozen() -> Non
     coordinates = torch.randn(2, 6, 2)
     padding_mask = torch.zeros(2, 6, dtype=torch.bool)
     resolution = torch.tensor([0.25, -0.25], dtype=coordinates.dtype, device=coordinates.device)
-    dynamic = GriddedDynamic(torch.randn(2, 3, 6, 1), coordinates, padding_mask, resolution)
-    static = GriddedStatic(torch.randn(2, 6, 2), dynamic.coordinates, dynamic.padding_mask, resolution)
+    geography = GeographicGridGeometry(
+        coordinate_order=CoordinateOrder.LONGITUDE_LATITUDE,
+        crs=CoordinateReferenceSystem.EPSG_4326,
+        coordinate_unit=CoordinateUnit.DEGREE,
+        cell_reference=CellReferenceConvention.CENTER,
+        resolution_convention=SignedResolutionConvention.AXIS_ALIGNED_CELL_EXTENT_WITH_AXIS_DIRECTION,
+    )
+    dynamic = GriddedDynamic(torch.randn(2, 3, 6, 1), coordinates, padding_mask, resolution, geography)
+    static = GriddedStatic(torch.randn(2, 6, 2), dynamic.coordinates, dynamic.padding_mask, resolution, geography)
     dynamic_map = {"rain": dynamic}
     static_map = {"terrain": static}
     sample_ids = ("a", "b")
@@ -37,6 +55,8 @@ def test_native_batch_carriers_preserve_supplied_objects_and_are_frozen() -> Non
     assert dynamic.padding_mask is static.padding_mask
     assert dynamic.resolution is resolution
     assert static.resolution is resolution
+    assert dynamic.geography is geography
+    assert static.geography is geography
     field_name = "target"
     with pytest.raises(FrozenInstanceError):
         setattr(batch, field_name, torch.empty(0))
@@ -46,28 +66,56 @@ def test_native_batch_carriers_preserve_supplied_objects_and_are_frozen() -> Non
     ("carrier", "values_shape"),
     [(GriddedDynamic, (2, 3, 6, 1)), (GriddedStatic, (2, 6, 2))],
 )
-def test_gridded_carriers_require_resolution(carrier, values_shape: tuple[int, ...]) -> None:
+def test_gridded_carriers_require_geometry(carrier, values_shape: tuple[int, ...]) -> None:
     values = torch.randn(values_shape)
     coordinates = torch.randn(2, 6, 2)
     padding_mask = torch.zeros(2, 6, dtype=torch.bool)
 
     with pytest.raises(TypeError):
-        carrier(values, coordinates, padding_mask)
+        carrier(values, coordinates, padding_mask, torch.tensor([0.25, -0.25]))
 
 
 @pytest.mark.parametrize(
     ("carrier", "values_shape"),
     [(GriddedDynamic, (2, 3, 6, 1)), (GriddedStatic, (2, 6, 2))],
 )
-def test_gridded_carriers_preserve_supplied_resolution(carrier, values_shape: tuple[int, ...]) -> None:
+def test_gridded_carriers_preserve_supplied_resolution_and_geography(carrier, values_shape: tuple[int, ...]) -> None:
     values = torch.randn(values_shape)
     coordinates = torch.randn(2, 6, 2)
     padding_mask = torch.zeros(2, 6, dtype=torch.bool)
     resolution = torch.tensor([0.25, -0.25], dtype=coordinates.dtype, device=coordinates.device)
 
-    leg = carrier(values, coordinates, padding_mask, resolution)
+    geography = GeographicGridGeometry(
+        coordinate_order=CoordinateOrder.LONGITUDE_LATITUDE,
+        crs=CoordinateReferenceSystem.EPSG_4326,
+        coordinate_unit=CoordinateUnit.DEGREE,
+        cell_reference=CellReferenceConvention.CENTER,
+        resolution_convention=SignedResolutionConvention.AXIS_ALIGNED_CELL_EXTENT_WITH_AXIS_DIRECTION,
+    )
+    leg = carrier(values, coordinates, padding_mask, resolution, geography)
 
     assert leg.resolution is resolution
+    assert leg.geography is geography
+
+
+@pytest.mark.parametrize(
+    ("carrier", "values_shape"),
+    [(GriddedDynamic, (2, 3, 6, 1)), (GriddedStatic, (2, 6, 2))],
+)
+def test_gridded_carriers_reject_untyped_geography(carrier, values_shape: tuple[int, ...]) -> None:
+    values = torch.randn(values_shape)
+    coordinates = torch.randn(2, 6, 2)
+    padding_mask = torch.zeros(2, 6, dtype=torch.bool)
+    resolution = torch.tensor([0.25, -0.25])
+
+    with pytest.raises(TypeError, match="geography must be GeographicGridGeometry"):
+        carrier(
+            values,
+            coordinates,
+            padding_mask,
+            resolution,
+            "EPSG:4326 lon-lat degrees cell centers",
+        )
 
 
 def test_absent_quadrants_and_no_compatibility_aliases() -> None:

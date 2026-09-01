@@ -1,8 +1,16 @@
-__version__ = "0.1.5"
+__version__ = "0.1.7"
 
 from hcx.batch import Batch, BatchMetadata, GriddedDynamic, GriddedStatic
 from hcx.composition import ComposedModel
 from hcx.conformance import ConformanceCheck, ConformanceError, assert_conforms, check_conformance
+from hcx.geography import (
+    CellReferenceConvention,
+    CoordinateOrder,
+    CoordinateReferenceSystem,
+    CoordinateUnit,
+    GeographicGridGeometry,
+    SignedResolutionConvention,
+)
 from hcx.output import Forecast
 from hcx.protocol import MODEL_ENTRY_POINT_GROUP, FeatureExtractor, ForecastModel, ModelFactory
 from hcx.specifications import Gaussian, GaussianParameters, OutputSpecification, Point, PointParameters
@@ -12,20 +20,26 @@ __all__ = [
     "MODEL_ENTRY_POINT_GROUP",
     "Batch",
     "BatchMetadata",
+    "CellReferenceConvention",
     "ComposedModel",
     "ConformanceCheck",
     "ConformanceError",
+    "CoordinateOrder",
+    "CoordinateReferenceSystem",
+    "CoordinateUnit",
     "FeatureExtractor",
     "Forecast",
     "ForecastModel",
     "Gaussian",
     "GaussianParameters",
+    "GeographicGridGeometry",
     "GriddedDynamic",
     "GriddedStatic",
     "ModelFactory",
     "OutputSpecification",
     "Point",
     "PointParameters",
+    "SignedResolutionConvention",
     "assert_conforms",
     "check_conformance",
     "make_synthetic_batch",

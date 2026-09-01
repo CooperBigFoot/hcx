@@ -25,6 +25,7 @@ def test_built_wheel_contains_public_contract(tmp_path: Path) -> None:
             "hcx/__init__.py",
             "hcx/batch.py",
             "hcx/conformance.py",
+            "hcx/geography.py",
             "hcx/output.py",
             "hcx/protocol.py",
             "hcx/specifications.py",

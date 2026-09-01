@@ -9,11 +9,35 @@ including identity.
 
 ## 2. Batch and native metadata contract
 
-`GriddedDynamic` has `values [B, T, N, C]`, `coordinates [B, N, 2]`, and boolean
-`padding_mask [B, N]`, where true means padding. `GriddedStatic` has `values
-[B, N, S_g]` and the same coordinate and padding-mask shapes. `BatchMetadata`
-contains stable `sample_ids` of length B, integer `input_end_indices [B]`, and
-`target_fill_mask [B, T_out]`, nonzero where a missing target was filled.
+`GriddedDynamic` has `values [B, T, N, C]`, `coordinates [B, N, 2]`, boolean
+`padding_mask [B, N]` where true means padding, `resolution [2]`, and a
+`GeographicGridGeometry`. `GriddedStatic` has `values [B, N, S_g]` and the
+same coordinate, padding-mask, resolution, and geography contract. Each resolution component
+corresponds to the coordinate component in the same position.
+
+`GeographicGridGeometry` is the frozen, typed interpretation of the coordinate
+and resolution tensors. The currently supported contract is:
+
+- `CoordinateOrder.LONGITUDE_LATITUDE`: coordinate and resolution slot 0 is
+  longitude and slot 1 is latitude;
+- `CoordinateReferenceSystem.EPSG_4326`: coordinates use EPSG:4326;
+- `CoordinateUnit.DEGREE`: coordinates and resolution use angular degrees;
+- `CellReferenceConvention.CENTER`: each coordinate identifies its cell center;
+- `SignedResolutionConvention.AXIS_ALIGNED_CELL_EXTENT_WITH_AXIS_DIRECTION`:
+  each resolution magnitude is the cell extent in degrees and its sign records the native raster
+  axis direction.
+
+The geography carrier contains no data-domain policy. In particular, it neither
+asserts a CAMELS-US domain nor makes antimeridian or polar geography supported.
+Consumers own and enforce the narrower geographic domain required by their
+mathematics. Producers must parse raw metadata into these enum members before
+constructing a gridded leg. Gridded carrier construction rejects a `geography`
+value that is not a `GeographicGridGeometry`; raw strings and booleans are not
+legal substitutes.
+
+`BatchMetadata` contains stable `sample_ids` of length B, integer
+`input_end_indices [B]`, and `target_fill_mask [B, T_out]`, nonzero where a
+missing target was filled.
 
 `Batch` has exactly four input quadrants: `scalar_dynamic [B, T, F]` or `None`,
 `scalar_static [B, S]` or `None`, and the ordered Python mappings
@@ -152,9 +176,10 @@ rebuilding.
 ## 8. Identity and mutation rules
 
 All carriers are frozen dataclasses. Implementations must not mutate metadata in
-place. `Batch.metadata` values are propagated verbatim by identity into a
-`Forecast`; specifications likewise pass the supplied metadata objects through
-by identity.
+place. Gridded carriers preserve their supplied tensors and `GeographicGridGeometry`
+object verbatim; they do not copy, infer, or normalize geometry. `Batch.metadata`
+values are propagated verbatim by identity into a `Forecast`; specifications
+likewise pass the supplied metadata objects through by identity.
 
 ## 9. Python and package compatibility
 

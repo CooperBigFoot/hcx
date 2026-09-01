@@ -1,7 +1,17 @@
+import math
+
 import numpy as np
 import torch
 
 from hcx.batch import Batch, BatchMetadata, GriddedDynamic, GriddedStatic
+from hcx.geography import (
+    CellReferenceConvention,
+    CoordinateOrder,
+    CoordinateReferenceSystem,
+    CoordinateUnit,
+    GeographicGridGeometry,
+    SignedResolutionConvention,
+)
 
 
 def make_synthetic_batch(
@@ -54,31 +64,49 @@ def make_synthetic_batch(
     def randn(shape: tuple[int, ...]) -> torch.Tensor:
         return torch.randn(shape, dtype=dtype, device=device, generator=generator)
 
-    def rand(shape: tuple[int, ...]) -> torch.Tensor:
-        return torch.rand(shape, dtype=dtype, device=device, generator=generator)
-
     scalar_dynamic = randn((batch_size, input_length, scalar_dynamic_features)) if include_scalar_dynamic else None
     scalar_static = randn((batch_size, scalar_static_features)) if include_scalar_static else None
+
+    geography = GeographicGridGeometry(
+        coordinate_order=CoordinateOrder.LONGITUDE_LATITUDE,
+        crs=CoordinateReferenceSystem.EPSG_4326,
+        coordinate_unit=CoordinateUnit.DEGREE,
+        cell_reference=CellReferenceConvention.CENTER,
+        resolution_convention=SignedResolutionConvention.AXIS_ALIGNED_CELL_EXTENT_WITH_AXIS_DIRECTION,
+    )
+    resolution = torch.tensor([0.25, -0.25], dtype=dtype, device=device)
+
+    def native_grid_coordinates() -> torch.Tensor:
+        column_count = math.ceil(math.sqrt(grid_cells))
+        cell_indices = torch.arange(grid_cells, device=device)
+        columns = torch.remainder(cell_indices, column_count).to(dtype=dtype)
+        rows = torch.div(cell_indices, column_count, rounding_mode="floor").to(dtype=dtype)
+        coordinates = torch.stack(
+            (
+                -120.0 + columns * resolution[0],
+                45.0 + rows * resolution[1],
+            ),
+            dim=-1,
+        )
+        return coordinates.unsqueeze(0).expand(batch_size, -1, -1)
 
     gridded_dynamic: dict[str, GriddedDynamic] = {}
     coordinates: torch.Tensor | None = None
     padding_mask: torch.Tensor | None = None
     if include_gridded_dynamic:
         values = randn((batch_size, input_length, grid_cells, gridded_dynamic_features))
-        coordinates = rand((batch_size, grid_cells, 2))
+        coordinates = native_grid_coordinates()
         padding_mask = torch.zeros((batch_size, grid_cells), dtype=torch.bool, device=device)
-        resolution = torch.tensor([0.25, -0.25], dtype=coordinates.dtype, device=coordinates.device)
-        gridded_dynamic["meteorology"] = GriddedDynamic(values, coordinates, padding_mask, resolution)
+        gridded_dynamic["meteorology"] = GriddedDynamic(values, coordinates, padding_mask, resolution, geography)
 
     gridded_static: dict[str, GriddedStatic] = {}
     if include_gridded_static:
         values = randn((batch_size, grid_cells, gridded_static_features))
         if coordinates is None:
-            coordinates = rand((batch_size, grid_cells, 2))
+            coordinates = native_grid_coordinates()
             padding_mask = torch.zeros((batch_size, grid_cells), dtype=torch.bool, device=device)
         assert padding_mask is not None
-        resolution = torch.tensor([0.25, -0.25], dtype=coordinates.dtype, device=coordinates.device)
-        gridded_static["physiography"] = GriddedStatic(values, coordinates, padding_mask, resolution)
+        gridded_static["physiography"] = GriddedStatic(values, coordinates, padding_mask, resolution, geography)
 
     target = randn((batch_size, output_length))
     metadata = BatchMetadata(

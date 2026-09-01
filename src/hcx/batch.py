@@ -3,6 +3,13 @@ from dataclasses import dataclass
 import numpy as np
 import torch
 
+from hcx.geography import GeographicGridGeometry
+
+
+def _require_geography(geography: object) -> None:
+    if not isinstance(geography, GeographicGridGeometry):
+        raise TypeError(f"geography must be GeographicGridGeometry; got {geography!r}")
+
 
 @dataclass(frozen=True)
 class GriddedDynamic:
@@ -10,6 +17,10 @@ class GriddedDynamic:
     coordinates: torch.Tensor
     padding_mask: torch.Tensor
     resolution: torch.Tensor
+    geography: GeographicGridGeometry
+
+    def __post_init__(self) -> None:
+        _require_geography(self.geography)
 
 
 @dataclass(frozen=True)
@@ -18,6 +29,10 @@ class GriddedStatic:
     coordinates: torch.Tensor
     padding_mask: torch.Tensor
     resolution: torch.Tensor
+    geography: GeographicGridGeometry
+
+    def __post_init__(self) -> None:
+        _require_geography(self.geography)
 
 
 @dataclass(frozen=True)
