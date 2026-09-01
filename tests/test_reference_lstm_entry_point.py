@@ -3,6 +3,7 @@ import importlib.metadata
 import torch
 
 import hcx.models.lstm
+from hcx import GeographicGridGeometry
 from hcx.conformance import assert_conforms
 from hcx.specifications import Gaussian, Point
 from hcx.synthetic import make_synthetic_batch
@@ -17,11 +18,9 @@ def test_installed_scalar_lstm_entry_point():
     loaded_factory = entry_point.load()
     assert loaded_factory is hcx.models.lstm.factory
 
-    batch = make_synthetic_batch(
-        include_gridded_dynamic=False,
-        include_gridded_static=False,
-        seed=1618,
-    )
+    batch = make_synthetic_batch(seed=1618)
+    assert isinstance(batch.gridded_dynamic["meteorology"].geography, GeographicGridGeometry)
+    assert isinstance(batch.gridded_static["physiography"].geography, GeographicGridGeometry)
     assert batch.scalar_dynamic is not None
     assert batch.scalar_static is not None
     for seed, specification in [(11, Point()), (12, Gaussian())]:

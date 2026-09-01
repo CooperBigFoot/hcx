@@ -9,10 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Added a frozen geographic grid geometry contract for coordinate, CRS, unit, cell-reference, and signed-resolution semantics.
 - Added a human-gated GitHub Actions release workflow and static release-policy coverage.
 
 ### Changed
 
+- Required every gridded batch leg to carry its typed geographic geometry.
 - Documented release governance for versioning, tagging, and trusted publishing.
 
 ## [0.1.7] - 2026-07-11

@@ -3,6 +3,8 @@ from dataclasses import dataclass
 import numpy as np
 import torch
 
+from hcx.geography import GeographicGridGeometry
+
 
 @dataclass(frozen=True)
 class GriddedDynamic:
@@ -10,6 +12,7 @@ class GriddedDynamic:
     coordinates: torch.Tensor
     padding_mask: torch.Tensor
     resolution: torch.Tensor
+    geography: GeographicGridGeometry
 
 
 @dataclass(frozen=True)
@@ -18,6 +21,7 @@ class GriddedStatic:
     coordinates: torch.Tensor
     padding_mask: torch.Tensor
     resolution: torch.Tensor
+    geography: GeographicGridGeometry
 
 
 @dataclass(frozen=True)

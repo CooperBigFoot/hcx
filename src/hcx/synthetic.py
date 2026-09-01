@@ -2,6 +2,14 @@ import numpy as np
 import torch
 
 from hcx.batch import Batch, BatchMetadata, GriddedDynamic, GriddedStatic
+from hcx.geography import (
+    CellReferenceConvention,
+    CoordinateOrder,
+    CoordinateReferenceSystem,
+    CoordinateUnit,
+    GeographicGridGeometry,
+    SignedResolutionConvention,
+)
 
 
 def make_synthetic_batch(
@@ -60,6 +68,13 @@ def make_synthetic_batch(
     scalar_dynamic = randn((batch_size, input_length, scalar_dynamic_features)) if include_scalar_dynamic else None
     scalar_static = randn((batch_size, scalar_static_features)) if include_scalar_static else None
 
+    geography = GeographicGridGeometry(
+        coordinate_order=CoordinateOrder.LONGITUDE_LATITUDE,
+        crs=CoordinateReferenceSystem.EPSG_4326,
+        coordinate_unit=CoordinateUnit.DEGREE,
+        cell_reference=CellReferenceConvention.CENTER,
+        resolution_convention=SignedResolutionConvention.AXIS_ALIGNED_CELL_EXTENT_WITH_AXIS_DIRECTION,
+    )
     gridded_dynamic: dict[str, GriddedDynamic] = {}
     coordinates: torch.Tensor | None = None
     padding_mask: torch.Tensor | None = None
@@ -68,7 +83,7 @@ def make_synthetic_batch(
         coordinates = rand((batch_size, grid_cells, 2))
         padding_mask = torch.zeros((batch_size, grid_cells), dtype=torch.bool, device=device)
         resolution = torch.tensor([0.25, -0.25], dtype=coordinates.dtype, device=coordinates.device)
-        gridded_dynamic["meteorology"] = GriddedDynamic(values, coordinates, padding_mask, resolution)
+        gridded_dynamic["meteorology"] = GriddedDynamic(values, coordinates, padding_mask, resolution, geography)
 
     gridded_static: dict[str, GriddedStatic] = {}
     if include_gridded_static:
@@ -78,7 +93,7 @@ def make_synthetic_batch(
             padding_mask = torch.zeros((batch_size, grid_cells), dtype=torch.bool, device=device)
         assert padding_mask is not None
         resolution = torch.tensor([0.25, -0.25], dtype=coordinates.dtype, device=coordinates.device)
-        gridded_static["physiography"] = GriddedStatic(values, coordinates, padding_mask, resolution)
+        gridded_static["physiography"] = GriddedStatic(values, coordinates, padding_mask, resolution, geography)
 
     target = randn((batch_size, output_length))
     metadata = BatchMetadata(
