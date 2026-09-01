@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Enforced typed geography at gridded carrier construction and made synthetic centers agree with their signed resolution.
 - Required every gridded batch leg to carry its typed geographic geometry.
 - Documented release governance for versioning, tagging, and trusted publishing.
 

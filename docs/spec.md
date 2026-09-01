@@ -31,7 +31,9 @@ The geography carrier contains no data-domain policy. In particular, it neither
 asserts a CAMELS-US domain nor makes antimeridian or polar geography supported.
 Consumers own and enforce the narrower geographic domain required by their
 mathematics. Producers must parse raw metadata into these enum members before
-constructing a gridded leg; raw strings and booleans are not legal substitutes.
+constructing a gridded leg. Gridded carrier construction rejects a `geography`
+value that is not a `GeographicGridGeometry`; raw strings and booleans are not
+legal substitutes.
 
 `BatchMetadata` contains stable `sample_ids` of length B, integer
 `input_end_indices [B]`, and `target_fill_mask [B, T_out]`, nonzero where a

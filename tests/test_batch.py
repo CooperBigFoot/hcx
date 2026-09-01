@@ -98,6 +98,26 @@ def test_gridded_carriers_preserve_supplied_resolution_and_geography(carrier, va
     assert leg.geography is geography
 
 
+@pytest.mark.parametrize(
+    ("carrier", "values_shape"),
+    [(GriddedDynamic, (2, 3, 6, 1)), (GriddedStatic, (2, 6, 2))],
+)
+def test_gridded_carriers_reject_untyped_geography(carrier, values_shape: tuple[int, ...]) -> None:
+    values = torch.randn(values_shape)
+    coordinates = torch.randn(2, 6, 2)
+    padding_mask = torch.zeros(2, 6, dtype=torch.bool)
+    resolution = torch.tensor([0.25, -0.25])
+
+    with pytest.raises(TypeError, match="geography must be GeographicGridGeometry"):
+        carrier(
+            values,
+            coordinates,
+            padding_mask,
+            resolution,
+            "EPSG:4326 lon-lat degrees cell centers",
+        )
+
+
 def test_absent_quadrants_and_no_compatibility_aliases() -> None:
     metadata = BatchMetadata((), np.array([], dtype=int), np.empty((0, 1), dtype=np.int8))
     batch = Batch(None, None, {}, {}, torch.empty((0, 1)), metadata)
